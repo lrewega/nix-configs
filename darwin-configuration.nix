@@ -25,6 +25,21 @@
     };
   };
 
+  # services = {
+  #   postgresql = {
+  #     enable = true;
+  #     package = pkgs.postgresql;
+  #     dataDir = "/usr/local/var/postgres";
+  #   };
+  # };
+
+  fonts = {
+    enableFontDir = true;
+    fonts = with pkgs; [
+      source-code-pro
+    ];
+  };
+
   networking.hostName = "lrewega-MacBook-Air";
 
   # Use a custom configuration.nix location.
@@ -50,32 +65,6 @@
 
   # Create /etc/bashrc that loads the nix-darwin environment.
   programs.bash.enable = true;
-
-  programs.vim = {
-    enable = true;
-
-    extraKnownPlugins = {
-      vim-go = pkgs.vimUtils.buildVimPluginFrom2Nix {
-        name = "vim-go";
-        src = pkgs.fetchgit {
-          url = "git://github.com/fatih/vim-go";
-          rev = "abe94c3fcf681fde772f2906fbbdfecf5afda7c8";
-          sha256 = "c34c15cf1d742db7a809e61c515e63170415446666077945547ecbb65b16b4b9";
-        };
-      };
-    };
-
-    plugins = [ { names = [
-      "vim-fugitive"
-      "vim-gitgutter"
-      "vim-go"
-    ]; } ];
-
-    vimConfig = ''
-      set relativenumber
-      set hlsearch
-    '';
-  };
 
   # Address low ulimit defaults.
   launchd.daemons."limit-maxfiles".command = let

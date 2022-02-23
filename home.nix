@@ -3,24 +3,29 @@
   programs = {
     bash = {
       enable = true;
+      historyFileSize = -1;
+      historySize = -1;
       bashrcExtra = ''
-	# Set ulimit soft and hard limits to match launchctl's limits.
-	set_ulimit() {
-	    local soft=$1
-	    local hard=$2
-	    ulimit -H -n "$hard"
-	    ulimit -S -n "$soft"
-	}
-	set_ulimit $(launchctl limit maxfiles | awk '{ print $2,$3 }')
-	unset set_ulimit
+        # Set ulimit soft and hard limits to match launchctl's limits.
+        set_ulimit() {
+            local soft=$1
+            local hard=$2
+            ulimit -H -n "$hard"
+            ulimit -S -n "$soft"
+        }
+        set_ulimit $(launchctl limit maxfiles | awk '{ print $2,$3 }')
+        unset set_ulimit
+
+        # Enable per-session history.
+        SHELL_SESSION_HISTORY=1
 
         # TODO: avoid depending on Apple's script and just implement it here.
         if [ -e /etc/bashrc_Apple_Terminal ]; then
-	    source /etc/bashrc_Apple_Terminal
+            source /etc/bashrc_Apple_Terminal
             # Prevent shell session logs from being deleted.
             shell_session_delete_expired() {
                 (umask 077; touch "$SHELL_SESSION_TIMESTAMP_FILE")
-	    }
+            }
         fi
       '';
     };
@@ -32,14 +37,14 @@
         enableFlakes = true;
       };
       stdlib = ''
-	: ''${XDG_CACHE_HOME:=$HOME/.cache}
-	declare -A direnv_layout_dirs
-	direnv_layout_dir() {
-	    echo "''${direnv_layout_dirs[$PWD]:=$(
-		echo -n "$XDG_CACHE_HOME"/direnv/layouts/
-		echo -n "$PWD" | shasum | cut -d ' ' -f 1
-	    )}"
-	}
+        : ''${XDG_CACHE_HOME:=$HOME/.cache}
+        declare -A direnv_layout_dirs
+        direnv_layout_dir() {
+            echo "''${direnv_layout_dirs[$PWD]:=$(
+                echo -n "$XDG_CACHE_HOME"/direnv/layouts/
+                echo -n "$PWD" | shasum | cut -d ' ' -f 1
+            )}"
+        }
       '';
       enableBashIntegration = true;
     };
@@ -71,6 +76,33 @@
             UseKeychain yes
       '';
     };
+
+    vim = {
+      enable = true;
+
+      plugins = with pkgs.vimPlugins; [
+        vim-commentary
+        vim-fugitive
+        vim-gitgutter
+        vim-go
+        vim-sensible
+        vim-sleuth
+        mkdx
+      ];
+
+      settings = {
+        relativenumber = true;
+      };
+
+      extraConfig = ''
+        set hlsearch
+
+        let g:mkdx#settings = {
+        \ 'map': { 'prefix': '<Space>' }
+        \ }
+      '';
+
+    };
   };
 
   # Make Home & End keys work as is tradition.
@@ -80,6 +112,8 @@
     "$\UF729" = "moveToBeginningOfLineAndModifySelection:";
     "$\UF72B" = "moveToEndOfLineAndModifySelection:";
   };
+
+  home.sessionVariables.EDITOR = "vim";
 
   # This value determines the Home Manager release that your
   # configuration is compatible with. This helps avoid breakage
