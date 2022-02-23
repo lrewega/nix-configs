@@ -9,10 +9,15 @@
   environment.shells = with pkgs; [ bashInteractive bashInteractive_5 ];
 
   system.defaults = {
+    # NSGlobalDomain = {
+    #   NSWindowShouldDragOnGesture = true;
+    # };
+
     finder = {
       AppleShowAllExtensions = true;
       QuitMenuItem = true;
       FXEnableExtensionChangeWarning = false;
+      CreateDesktop = false;
     };
 
     loginwindow = {
