@@ -28,13 +28,15 @@
             }
         fi
       '';
+      initExtra = ''
+        PS1="\u@\h:\W \$ "
+      '';
     };
 
     direnv = {
       enable = true;
       nix-direnv = {
         enable = true;
-        enableFlakes = true;
       };
       stdlib = ''
         : ''${XDG_CACHE_HOME:=$HOME/.cache}
@@ -57,9 +59,6 @@
           defaultBranch = "main";
         };
         url."ssh://git@github.com/".insteadOf = "https://github.com/";
-#       core = {
-#           sshCommand = "/usr/bin/ssh";
-#       };
       };
       userName = "Luke Rewega";
       userEmail = "lrewega@buf.build";
@@ -103,14 +102,6 @@
       '';
 
     };
-  };
-
-  # Make Home & End keys work as is tradition.
-  targets.darwin.keybindings = {
-    "\UF729" = "moveToBeginningOfLine:";
-    "\UF72B" = "moveToEndOfLine:";
-    "$\UF729" = "moveToBeginningOfLineAndModifySelection:";
-    "$\UF72B" = "moveToEndOfLineAndModifySelection:";
   };
 
   home.sessionVariables.EDITOR = "vim";
