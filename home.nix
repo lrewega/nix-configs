@@ -51,18 +51,34 @@
       enableBashIntegration = true;
     };
 
-    git = {
-      enable = true;
-      package = pkgs.gitAndTools.gitFull;
-      extraConfig = {
-        init = {
-          defaultBranch = "main";
+    git = let
+        gitBufUserAndEmailConfig = pkgs.writeText "buf_user_and_email.inc" ''
+          [user]
+            name = Luke Rewega
+            email = lrewega@buf.build
+        '';
+      in {
+        enable = true;
+        package = pkgs.gitAndTools.gitFull;
+        extraConfig = {
+          init = {
+            defaultBranch = "main";
+          };
+          url."ssh://git@github.com/".insteadOf = "https://github.com/";
         };
-        url."ssh://git@github.com/".insteadOf = "https://github.com/";
+        userName = "Luke Rewega";
+        userEmail = "lrewega@c32.ca";
+        includes = [
+          {
+            condition = "gitdir:~/wrk/github.com/bufbuild/";
+            path = "${gitBufUserAndEmailConfig}";
+          }
+          {
+            condition = "gitdir:~/wrk/github.com/connectrpc/";
+            path = "${gitBufUserAndEmailConfig}";
+          }
+        ];
       };
-      userName = "Luke Rewega";
-      userEmail = "lrewega@buf.build";
-    };
 
     htop.enable = true;
 
