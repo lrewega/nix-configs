@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 
 {
   environment.systemPackages = with pkgs; [
@@ -7,6 +7,11 @@
 
   # Configure /etc/shells to allow use of custom shell programs.
   environment.shells = with pkgs; [ bashInteractive bashInteractive_5 ];
+
+  # via shasum -a 256 /etc/shells
+  environment.etc.shells.knownSha256Hashes = [
+    "9d5aa72f807091b481820d12e693093293ba33c73854909ad7b0fb192c2db193"
+  ];
 
   system.defaults = {
     # NSGlobalDomain = {
@@ -33,14 +38,14 @@
   #   };
   # };
 
-  fonts = {
-    fontDir.enable = true;
-    fonts = with pkgs; [
-      source-code-pro
-    ];
-  };
+  # fonts = {
+  #   fontDir.enable = true;
+  #   fonts = with pkgs; [
+  #     source-code-pro
+  #   ];
+  # };
 
-  networking.hostName = "lrewega-MacBook-Air";
+  networking.hostName = "lrewega-MacBook-Pro";
 
   # Use a custom configuration.nix location.
   # $ darwin-rebuild switch -I darwin-config=$HOME/.config/nixpkgs/darwin/configuration.nix
@@ -50,14 +55,20 @@
     package = pkgs.nixFlakes;
 
     extraOptions = ''
-      experimental-features = nix-command flakes
+      experimental-features = nix-command flakes repl-flake
       keep-derivations = true
       keep-outputs = true
     '';
 
     # Use all cores.
-    maxJobs = 8;
-    buildCores = 8;
+    settings = {
+      #build-users-group = "nixbld";
+      #experimental-features = [ "nix-command" "flakes" "repl-flake" ];
+      bash-prompt-prefix = "(nix:$name)\\040";
+      max-jobs = "auto";
+      extra-nix-path = "nixpkgs=flake:nixpkgs";
+    };
+    useDaemon = true;
   };
 
   # Enable derivations for non-free software.

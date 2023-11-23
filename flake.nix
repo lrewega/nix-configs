@@ -2,14 +2,14 @@
   description = "lrewega's MacBook Air";
 
   inputs = {
-    # Package sets.
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    # Temporarily use a revision excluding https://github.com/NixOS/nixpkgs/pull/241692 until addressed
+    # Selected arbitrarily via https://github.com/NixOS/nixpkgs/activity?ref=nixos-unstable and verifying a cache hit
+    nixpkgs.url = "github:NixOS/nixpkgs/5e4c2ada4fcd54b99d56d7bd62f384511a7e2593";
+    # nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
 
-    # System.
     darwin.url = "github:lnl7/nix-darwin";
     darwin.inputs.nixpkgs.follows = "nixpkgs";
 
-    # Environment.
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -25,7 +25,7 @@
     ...
   }: {
     darwinConfigurations = {
-      lrewega-MacBook-Air = darwin.lib.darwinSystem {
+      lrewega-MacBook-Pro = darwin.lib.darwinSystem {
         system = "aarch64-darwin";
         modules = [
           ./darwin-configuration.nix

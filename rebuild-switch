@@ -1,3 +1,26 @@
 #!/usr/bin/env bash
 
-darwin-rebuild switch --flake $PWD && rm -f result
+darwinRebuild() {
+	if [ -n "$(command -v darwin-rebuild)" ]; then
+		darwin-rebuild "$@"
+	else
+		echo >&2 "first time? bootstrapping..."
+		nix --extra-experimental-features "nix-command flakes" run nix-darwin -- "$@"
+	fi
+}
+
+ensureDefaultShell() {
+	declare wantShell=$1; shift
+
+	declare loginShell
+	loginShell=$(dscl . -read "$HOME" UserShell)
+
+	if [ "${loginShell#*: }" != "$wantShell" ]; then
+		echo >&2 "need to change login shell from ${loginShell#*: } to $wantShell"
+		chsh -s "$wantShell"
+	fi
+}
+
+darwinRebuild switch --flake "$PWD"
+
+ensureDefaultShell /run/current-system/sw/bin/bash
