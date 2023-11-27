@@ -100,6 +100,8 @@
         vim-fugitive
         vim-gitgutter
         vim-go
+        vim-lsp
+        vim-nix
         vim-sensible
         vim-sleuth
         mkdx
@@ -115,6 +117,37 @@
         let g:mkdx#settings = {
         \ 'map': { 'prefix': '<Space>' }
         \ }
+
+        " LSP for *.nix
+        if executable('nil') " && executable('nixpkgs-fmt')
+            autocmd User lsp_setup call lsp#register_server({
+              \   'name': 'nil',
+              \   'cmd': {server_info->[&shell, &shellcmdflag, 'nil']},
+              \   'whitelist': ['nix'],
+              \ })
+          if executable('nixpkgs-fmt')
+            autocmd User lsp_setup call lsp#update_workspace_config('nil', {
+              \   'nil': {
+              \     'formatting': {
+              \       'command': ['nixpkgs-fmt'],
+              \     },
+              \   },
+              \ })
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+          endif
+        elseif executable('rnix-lsp')
+          autocmd User lsp_setup call lsp#register_server({
+            \   'name': 'rnix-lsp',
+            \   'cmd': {server_info->[&shell, &shellcmdflag, 'rnix-lsp']},
+            \   'whitelist': ['nix'],
+            \ })
+          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+        endif
+
+        function! s:on_lsp_buffer_enabled()
+          let g:lsp_format_sync_timeout = 1000
+          autocmd BufWritePre *.nix call execute('LspDocumentFormatSync')
+        endfunction
       '';
 
     };
