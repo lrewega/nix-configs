@@ -96,6 +96,9 @@
       enable = true;
 
       plugins = with pkgs.vimPlugins; [
+        mkdx
+        nerdtree
+        papercolor-theme
         vim-commentary
         vim-fugitive
         vim-gitgutter
@@ -104,7 +107,6 @@
         vim-nix
         vim-sensible
         vim-sleuth
-        mkdx
       ];
 
       settings = {
@@ -113,6 +115,33 @@
 
       extraConfig = ''
         set hlsearch
+
+        " Enable extra highlighting features for Go (vim-go)
+        let g:go_highlight_trailing_whitespace_error = 1
+        let g:go_highlight_functions = 1
+        let g:go_highlight_function_parameters = 1
+        let g:go_highlight_function_calls = 1
+        let g:go_highlight_types = 1
+        let g:go_highlight_fields = 1
+        let g:go_highlight_build_constraints = 1
+        let g:go_highlight_generate_tags = 1
+        let g:go_highlight_string_spellcheck = 1
+        let g:go_highlight_format_strings = 1
+        let g:go_highlight_variable_declarations = 1
+        let g:go_highlight_variable_assignments = 1
+
+        " Reapply syntax highlight groups when changing colorscheme
+        augroup ColourSchemeReload
+            au!
+            au ColorScheme * call <SID>FixSyntaxHighlightGroups()
+        augroup END
+
+        fun s:FixSyntaxHighlightGroups()
+            let b = bufnr()
+            let &l:filetype = &l:filetype
+            bufdo let &l:filetype = &l:filetype
+            exec "buffer" b
+        endfun
 
         let g:mkdx#settings = {
         \ 'map': { 'prefix': '<Space>' }
