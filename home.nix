@@ -143,6 +143,16 @@
             exec "buffer" b
         endfun
 
+        " PaperColor
+        let g:PaperColor_Theme_Options = {
+          \   'theme': {
+          \     'default': {
+          \       'transparent_background': 1
+          \     }
+          \   }
+          \ }
+
+        " mkdx
         let g:mkdx#settings = {
         \ 'map': { 'prefix': '<Space>' }
         \ }
