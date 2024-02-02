@@ -95,18 +95,34 @@
     vim = {
       enable = true;
 
-      plugins = with pkgs.vimPlugins; [
+      plugins = let
+        vim-synthwave84 = pkgs.vimUtils.buildVimPlugin {
+          name = "";
+          src = pkgs.fetchFromGitHub {
+            owner = "artanikin";
+            repo = "vim-synthwave84";
+            rev = "a5caa80d9e1a7021f9ec6c06a96d09dfc2d99ed1";
+            hash = "sha256-5+rOp2xDdtIMxMdvV0N18yTSQuSzYIfnFvwNeufaDgQ=";
+          };
+        };
+      in with pkgs.vimPlugins; [
+        # Languages
         mkdx
-        nerdtree
+        vim-go
+        vim-nix
+        # Themes
+        onedark-vim
         papercolor-theme
+        # Misc.
+        nerdtree
         vim-commentary
         vim-fugitive
         vim-gitgutter
-        vim-go
         vim-lsp
-        vim-nix
         vim-sensible
         vim-sleuth
+      ] ++ [
+        vim-synthwave84
       ];
 
       settings = {
