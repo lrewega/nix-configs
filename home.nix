@@ -131,6 +131,7 @@
 
       extraConfig = ''
         set hlsearch
+        set textwidth=100
 
         " Enable extra highlighting features for Go (vim-go)
         let g:go_highlight_trailing_whitespace_error = 1
