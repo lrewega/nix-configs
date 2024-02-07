@@ -118,6 +118,7 @@
         vim-commentary
         vim-fugitive
         vim-gitgutter
+        vim-helm
         vim-lsp
         vim-sensible
         vim-sleuth
@@ -132,6 +133,12 @@
       extraConfig = ''
         set hlsearch
         set textwidth=100
+        if has('termguicolors')
+          set termguicolors
+        endif
+        set background=dark
+
+        colorscheme PaperColor
 
         " Enable extra highlighting features for Go (vim-go)
         let g:go_highlight_trailing_whitespace_error = 1
@@ -147,18 +154,24 @@
         let g:go_highlight_variable_declarations = 1
         let g:go_highlight_variable_assignments = 1
 
+        " More Go knobs
+        let g:go_doc_popup_window = 1
+        let g:go_doc_balloon = 1
+        autocmd BufNewFile,BufRead *.go setlocal mouse=a ttymouse=sgr balloonexpr=go#tool#DescribeBalloon() balloondelay=250 balloonevalterm
+
         " Reapply syntax highlight groups when changing colorscheme
         augroup ColourSchemeReload
             au!
             au ColorScheme * call <SID>FixSyntaxHighlightGroups()
+            au ColorScheme PaperColor highlight SignColumn guibg=Black " Fix PaperColor
         augroup END
 
-        fun s:FixSyntaxHighlightGroups()
+        function s:FixSyntaxHighlightGroups()
             let b = bufnr()
             let &l:filetype = &l:filetype
             bufdo let &l:filetype = &l:filetype
             exec "buffer" b
-        endfun
+        endfunction
 
         " PaperColor
         let g:PaperColor_Theme_Options = {
@@ -175,34 +188,103 @@
         \ }
 
         " LSP for *.nix
-        if executable('nil') " && executable('nixpkgs-fmt')
-            autocmd User lsp_setup call lsp#register_server({
-              \   'name': 'nil',
-              \   'cmd': {server_info->[&shell, &shellcmdflag, 'nil']},
-              \   'whitelist': ['nix'],
-              \ })
+        if executable('nil')
+          autocmd User lsp_setup call lsp#register_server({
+            \   'name': 'nil',
+            \   'cmd': {server_info->[&shell, &shellcmdflag, 'nil']},
+            \   'allowlist': ['nix'],
+            \ })
           if executable('nixpkgs-fmt')
             autocmd User lsp_setup call lsp#update_workspace_config('nil', {
-              \   'nil': {
-              \     'formatting': {
-              \       'command': ['nixpkgs-fmt'],
-              \     },
-              \   },
-              \ })
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+            \   'nil': {
+            \     'formatting': {
+            \       'command': ['nixpkgs-fmt'],
+            \     },
+            \   },
+            \ })
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
           endif
         elseif executable('rnix-lsp')
           autocmd User lsp_setup call lsp#register_server({
-            \   'name': 'rnix-lsp',
-            \   'cmd': {server_info->[&shell, &shellcmdflag, 'rnix-lsp']},
-            \   'whitelist': ['nix'],
-            \ })
-          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+          \   'name': 'rnix-lsp',
+          \   'cmd': {server_info->[&shell, &shellcmdflag, 'rnix-lsp']},
+          \   'allowlist': ['nix'],
+          \ })
+          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
         endif
 
-        function! s:on_lsp_buffer_enabled()
+        " LSP for *.yaml
+        if executable('yaml-language-server')
+          autocmd User lsp_setup call lsp#register_server({
+          \   'name': 'yaml-language-server',
+          \   'cmd': {server_info->[&shell, &shellcmdflag, 'yaml-language-server --stdio']},
+          \   'allowlist': ['yaml'],
+          \   'root_uri': {-> s:root_uri('.git')},
+          \   'workspace_config': {
+          \     'yaml': {
+          \       'format': {
+          \         'enable': v:true,
+          \       },
+          \       'schemas': {},
+          \       'schemaStore': {
+          \         'enable': v:true,
+          \         'url': "",
+          \       },
+          \     },
+          \   },
+          \ })
+          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.yaml')
+        endif
+
+        " LSP for *.json
+        if executable('vscode-json-language-server')
+          autocmd User lsp_setup call lsp#register_server({
+          \   'name': 'vscode-json-language-server',
+          \   'cmd': {server_info->[&shell, &shellcmdflags, 'vscode-json-language-server --stdio']},
+          \   'allowlist': ['json'],
+          \   'root_uri': {-> s:root_uri('.git')},
+          \   'workspace_config': {
+          \     'json': {
+          \       'format': {
+          \         'enable': v:true,
+          \       },
+          \       'schemas': {},
+          \       'schemaStore': {
+          \         'enable': v:true,
+          \       },
+          \     },
+          \   },
+          \ })
+          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.json')
+        endif
+
+        " LSP helper function to find a reasonable filesystem root path for a project.
+        function s:root_uri(...) abort
+          function s:join(...) abort
+            let sep = has('win32') ? '\' : '/'
+            return join(map(copy(a:000), "substitute(v:val, '[/\\\\]\\+$', \"\", \"\")"), sep)
+          endfunction
+          let root = expand('%:p:h')
+          let prev = ""
+          while root !=# prev
+            for name in a:000
+              if getftype(s:join(root, name)) !=# ""
+                return lsp#utils#path_to_uri(root)
+              endif
+            endfor
+            let prev = root
+            let root = fnamemodify(root, ':h')
+          endwhile
+          return lsp#utils#get_default_root_uri()
+        endfunction
+
+        " Stuff to run when LSP is engaged for a buffer
+        function s:on_lsp_buffer_enabled(matches)
+          setlocal omnifunc=lsp#complete
+          setlocal signcolumn=yes
+          nmap <buffer> K <plug>(lsp-hover)
           let g:lsp_format_sync_timeout = 1000
-          autocmd BufWritePre *.nix call execute('LspDocumentFormatSync')
+          autocmd BufWritePre a:matches call execute('LspDocumentFormatSync')
         endfunction
       '';
 
