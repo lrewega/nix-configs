@@ -122,15 +122,6 @@
               hash = "sha256-RWQfEXSrKRTMTPw17du0GfRDTafDBtuug4hwWUc6vcg=";
             };
           };
-          molokayo = pkgs.vimUtils.buildVimPlugin {
-            name = "molokayo";
-            src = pkgs.fetchFromGitHub {
-              owner = "fmoralesc";
-              repo = "molokayo";
-              rev = "d45f3acaa75559f5ad04f74aec90c73295321074";
-              hash = "sha256-RWQfEXSrKRTMTPw17du0GfRDTafDBtuug4hwWUc6vcg=";
-            };
-          };
         };
       in
       {
@@ -144,11 +135,13 @@
                 # Languages
                 mkdx
                 vim-go
+                vim-helm
+                vim-lsp
                 vim-nix
                 # Themes
                 gruvbox
-                molokai
                 jellybeans-vim
+                molokai
                 onedark-vim
                 papercolor-theme
                 # Misc.
@@ -156,26 +149,55 @@
                 vim-commentary
                 vim-fugitive
                 vim-gitgutter
-                vim-helm
-                vim-lsp
                 vim-sensible
                 vim-sleuth
                 ;
             } ++ builtins.attrValues extraPlugins;
 
-        settings = {
-          relativenumber = true;
-        };
-
         extraConfig = ''
           set hlsearch
+          set relativenumber
           set textwidth=100
+
           if has('termguicolors')
             set termguicolors
           endif
           set background=dark
 
+          syntax enable " Just in case.
+
+          augroup FixColorScheme
+            autocmd colorscheme * call s:fixColorScheme()
+          augroup END
+          function s:fixColorScheme()
+            " Some colorschemes muck up SignColumn, transparent seems to work reliably.
+            highlight SignColumn guibg=NONE
+          endfunction
+
+          " PaperColor
+          let g:PaperColor_Theme_Options = {
+          \   'theme': {
+          \     'default': {
+          \       'transparent_background': 1
+          \     }
+          \   }
+          \ }
           colorscheme PaperColor
+
+          " N.B. this augroup is explicitly after setting the default colorscheme.
+          " Allowing this to run too early appears to interfere with ftdetect.
+          augroup ReapplyHighlightGroups
+            autocmd colorscheme * call s:reapplyHighlightGroups()
+          augroup END
+          function s:reapplyHighlightGroups()
+            " Trigger refreshing syntax highlight groups for all buffers
+            let current = bufnr()
+            bufdo let &l:filetype = &l:filetype
+            exec "buffer" current
+          endfunction
+
+          " Let other plugins (like lsp) draw over gitgutter signs.
+          let g:gitgutter_sign_priority = 0
 
           " Enable extra highlighting features for Go (vim-go)
           let g:go_highlight_trailing_whitespace_error = 1
@@ -194,30 +216,17 @@
           " More Go knobs
           let g:go_doc_popup_window = 1
           let g:go_doc_balloon = 1
-          autocmd BufNewFile,BufRead *.go setlocal mouse=a ttymouse=sgr balloonexpr=go#tool#DescribeBalloon() balloondelay=250 balloonevalterm
-
-          " Reapply syntax highlight groups when changing colorscheme
-          augroup ColourSchemeReload
-              au!
-              au ColorScheme * call <SID>FixSyntaxHighlightGroups()
-              au ColorScheme PaperColor highlight SignColumn guibg=Black " Fix PaperColor
+          augroup GoFileKnobs
+            autocmd BufNewFile,BufRead *.go call s:enableGoFileKnobs()
           augroup END
 
-          function s:FixSyntaxHighlightGroups()
-              let b = bufnr()
-              let &l:filetype = &l:filetype
-              bufdo let &l:filetype = &l:filetype
-              exec "buffer" b
+          function s:enableGoFileKnobs()
+            setlocal mouse=a
+            setlocal ttymouse=sgr
+            setlocal balloonexpr=go#tool#DescribeBalloon()
+            setlocal balloondelay=250
+            setlocal balloonevalterm
           endfunction
-
-          " PaperColor
-          let g:PaperColor_Theme_Options = {
-            \   'theme': {
-            \     'default': {
-            \       'transparent_background': 1
-            \     }
-            \   }
-            \ }
 
           " mkdx
           let g:mkdx#settings = {
@@ -229,10 +238,10 @@
           let s:nixpkgs_fmt = '${nixpkgs-fmt}'
           if executable(s:lsp_exe_nix)
             autocmd User lsp_setup call lsp#register_server({
-              \   'name': 'nil',
-              \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_nix]},
-              \   'allowlist': ['nix'],
-              \ })
+            \   'name': 'nil',
+            \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_nix]},
+            \   'allowlist': ['nix'],
+            \ })
             if executable(s:nixpkgs_fmt)
               autocmd User lsp_setup call lsp#update_workspace_config('nil', {
               \   'nil': {
@@ -243,13 +252,6 @@
               \ })
               autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
             endif
-          elseif executable('rnix-lsp')
-            autocmd User lsp_setup call lsp#register_server({
-            \   'name': 'rnix-lsp',
-            \   'cmd': {server_info->[&shell, &shellcmdflag, 'rnix-lsp']},
-            \   'allowlist': ['nix'],
-            \ })
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
           endif
 
           " LSP for *.yaml
@@ -284,7 +286,7 @@
           if executable(s:lsp_exe_json)
             autocmd User lsp_setup call lsp#register_server({
             \   'name': 'vscode-json-language-server',
-            \   'cmd': {server_info->[&shell, &shellcmdflags, s:lsp_exe_json . ' --stdio']},
+            \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_json . ' --stdio']},
             \   'allowlist': ['json'],
             \   'root_uri': {-> s:root_uri('.git')},
             \   'workspace_config': {
@@ -326,10 +328,12 @@
           function s:on_lsp_buffer_enabled(matches)
             setlocal updatetime=250
             setlocal omnifunc=lsp#complete
-            setlocal signcolumn=yes
             nmap <buffer> K <plug>(lsp-hover)
             let g:lsp_format_sync_timeout = 1000
-            autocmd BufWritePre a:matches call execute('LspDocumentFormatSync')
+            augroup LSPFormatOnSave
+              autocmd!
+              autocmd BufWritePre a:matches call execute('LspDocumentFormatSync')
+            augroup END
           endfunction
         '';
 
