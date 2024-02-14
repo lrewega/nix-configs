@@ -192,6 +192,10 @@
           function s:reapplyHighlightGroups()
             " Trigger refreshing syntax highlight groups for all buffers
             let current = bufnr()
+            " For some reason the following line avoids triggering a file listing prompt. It's
+            " redundant as the bufdo will run the same command, but it appears harmless enough
+            " to do it twice.
+            let &l:filetype = &l:filetype
             bufdo let &l:filetype = &l:filetype
             exec "buffer" current
           endfunction
@@ -336,7 +340,6 @@
             augroup END
           endfunction
         '';
-
       };
   };
 
