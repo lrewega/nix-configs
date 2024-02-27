@@ -38,12 +38,13 @@
   #   };
   # };
 
-  # fonts = {
-  #   fontDir.enable = true;
-  #   fonts = with pkgs; [
-  #     source-code-pro
-  #   ];
-  # };
+  fonts = {
+    fontDir.enable = true;
+    fonts = with pkgs; [
+      go-font
+      source-code-pro
+    ];
+  };
 
   networking.hostName = "lrewega-MacBook-Pro";
 
