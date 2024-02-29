@@ -158,6 +158,7 @@
           set hlsearch
           set relativenumber
           set textwidth=100
+          set directory=~/.cache/vim,/var/tmp,/tmp
 
           if has('termguicolors')
             set termguicolors
