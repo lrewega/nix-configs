@@ -1,11 +1,11 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 {
   programs = {
     bash = {
       enable = true;
       historyFileSize = -1;
       historySize = -1;
-      bashrcExtra = ''
+      bashrcExtra = /* bash */ ''
         # Set ulimit soft and hard limits to match launchctl's limits.
         set_ulimit() {
             local soft=$1
@@ -28,9 +28,14 @@
             }
         fi
       '';
-      initExtra = ''
+      initExtra = /* bash */ ''
         PS1="\u@\h:\W \$ "
       '';
+      shellAliases = {
+        b32 = /* bash */ ''
+          base32(){ LC_ALL=C tr -dc 0-9a-df-np-sv-z </dev/urandom | head -c ''${1:-16};shift;printf '%s\n' \"$*\";};base32 \"$@\"
+        '';
+      };
     };
 
     direnv = {
@@ -38,7 +43,7 @@
       nix-direnv = {
         enable = true;
       };
-      stdlib = ''
+      stdlib = /* bash */ ''
         : ''${XDG_CACHE_HOME:=$HOME/.cache}
         declare -A direnv_layout_dirs
         direnv_layout_dir() {
@@ -53,7 +58,7 @@
 
     git =
       let
-        gitBufUserAndEmailConfig = pkgs.writeText "buf_user_and_email.inc" ''
+        gitBufUserAndEmailConfig = pkgs.writeText "buf_user_and_email.inc" /* gitconfig */ ''
           [user]
             name = Luke Rewega
             email = lrewega@buf.build
@@ -86,7 +91,7 @@
 
     ssh = {
       enable = true;
-      extraConfig = ''
+      extraConfig = /* sshconfig */ ''
         IdentityFile ~/.ssh/id_ed25519
         AddKeysToAgent yes
         IgnoreUnknown UseKeychain
@@ -138,6 +143,7 @@
                 vim-helm
                 vim-lsp
                 vim-nix
+                vim-terraform
                 # Themes
                 gruvbox
                 jellybeans-vim
@@ -154,10 +160,12 @@
                 ;
             } ++ builtins.attrValues extraPlugins;
 
-        extraConfig = ''
+        extraConfig = /* vim */ ''
           set hlsearch
           set relativenumber
           set textwidth=100
+          " Never automatically format lines.
+          set formatoptions-=t formatoptions-=c
           set directory=~/.cache/vim,/var/tmp,/tmp
 
           if has('termguicolors')
@@ -233,6 +241,57 @@
             setlocal balloonevalterm
           endfunction
 
+          " Nix syntax tweaks
+          augroup NixSyntaxTweaks
+            autocmd BufNewFile,BufRead *.nix call s:enableNixSyntaxTweaks()
+          augroup END
+
+          " Partially cribbed from https://github.com/LnL7/vim-nix/pull/28
+          function s:enableNixSyntaxTweaks()
+            " Define the fences. This is coupled to vim-nix.
+            syn region nixFencedString matchgroup=nixCodeStart
+              \ start=+/\*\s*[0-9A-Za-z_+-]*\s*\*/\s*''\'''\'+ skip=+''\'''\'[''\'''$\\]+ matchgroup=nixCodeEnd end=+''\'''\'+
+              \ keepend extend contains=nixInterpolation,nixStringSpecial,nixInvalidStringEscape
+            hi def link nixCodeEnd                   Delimiter
+            hi def link nixCodeStart                 Delimiter
+            hi def link nixFencedString              String
+            let filetypes = {
+              \ 'bash': 'Bash',
+              \ 'gitconfig' : 'Gitconfig',
+              \ 'sshconfig' : 'Sshconfig',
+              \ 'vim': 'Vim',
+            \ }
+            for filetype in keys(filetypes)
+              " Encapsulate the filetype's syntax rules
+              let group = 'nixFencedString' . filetypes[filetype]
+              let grouplistname = '@' . group . 'Hi'
+              if exists('b:current_syntax')
+                let syntax_save = b:current_syntax
+                unlet b:current_syntax
+              endif
+              try
+                execute 'syntax include' grouplistname 'syntax/' . filetype . '.vim'
+                execute 'syntax include' grouplistname 'after/syntax/' . filetype . '.vim'
+              catch /E484/
+                " Ignore missing scripts
+              endtry
+              if exists('syntax_save')
+                let b:current_syntax = syntax_save
+              elseif exists('b:current_syntax')
+                unlet b:current_syntax
+              endif
+              " Set up the fences. This is coupled to vim-nix.
+              execute printf("syn region %s matchgroup=nixCodeStart start=@/\\*\\s*%s\\s*\\*/\\s*''\'''\'@ matchgroup=NONE skip=+''\'''\'[''\'''$\\\\]+ "
+                \ . "matchgroup=nixCodeEnd end=+''\'''\'+ keepend extend contains=nixInterpolation,nixStringSpecial,nixInvalidStringEscape,%s", group, filetype, grouplistname)
+              execute printf("syn cluster nixExpr add=%s", group)
+              execute printf("syn region nixInterpolation matchgroup=nixInterpolationDelimiter start=+\\(''\'''\'\\)\\@<!\\''${+ end=+}+ containedin=%s contains=@nixExpr,nixInterpolationParam", grouplistname)
+              execute printf("syn match nixStringSpecial /''\'''\'\\$/me=e-1 containedin=%s", grouplistname)
+              execute printf("syn match nixStringSpecial /''\'''\'''\'/me=e-2 containedin=%s", grouplistname)
+              execute printf("syn match nixStringSpecial /''\'''\'\\\\[nrt]/ containedin=%s", grouplistname)
+              execute printf("syn match nixInvalidStringEscape /''\'''\'\\\\[^nrt]/ containedin=%s", grouplistname)
+            endfor
+          endfunction
+
           " mkdx
           let g:mkdx#settings = {
           \   'map': { 'prefix': '<Space>' }
@@ -274,7 +333,9 @@
             \         'enable': v:true,
             \       },
             \       'hover': v:true,
-            \       'schemas': {},
+            \       'schemas': {
+            \         'https://json.schemastore.org/github-workflow.json': '.github/workflows/**.yml',
+            \       },
             \       'schemaStore': {
             \         'enable': v:true,
             \         'url': "",

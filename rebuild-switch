@@ -5,6 +5,7 @@ darwinRebuild() {
 		darwin-rebuild "$@"
 	else
 		echo >&2 "first time? bootstrapping..."
+		# TODO: this should use the local flake as inputs.
 		nix --extra-experimental-features "nix-command flakes" run nix-darwin -- "$@"
 	fi
 }

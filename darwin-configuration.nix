@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }:
+{ nixpkgs, pkgs, lib, ... }:
 
 {
   environment.systemPackages = with pkgs; [
@@ -54,22 +54,43 @@
 
   nix = {
     package = pkgs.nixFlakes;
-
+    useDaemon = true;
     extraOptions = ''
       experimental-features = nix-command flakes repl-flake
       keep-derivations = true
       keep-outputs = true
     '';
-
-    # Use all cores.
     settings = {
-      #build-users-group = "nixbld";
-      #experimental-features = [ "nix-command" "flakes" "repl-flake" ];
       bash-prompt-prefix = "(nix:$name)\\040";
       max-jobs = "auto";
       extra-nix-path = "nixpkgs=flake:nixpkgs";
+      extra-trusted-substituters = [
+        "https://cache.floxdev.com"
+        "https://cache.flox.dev"
+      ];
+      extra-trusted-public-keys = [
+        "flox-store-public-0:8c/B+kjIaQ+BloCmNkRUKwaVPFWkriSAd0JJvuDu4F0=" # cache.floxdev.com
+        "flox-cache-public-1:7F4OyH7ZCnFhcze3fJdfyXYLQw/aV7GEed86nQ7IsOs=" # cache.flox.dev
+      ];
     };
-    useDaemon = true;
+    registry = {
+      # Expose the inputs to this very flake.
+      local.flake = nixpkgs;
+      # A rolling weekly unstable courtesy of detsys' flakehub
+      nixpkgs.to = {
+        type = "tarball";
+        url = "https://flakehub.com/f/DeterminateSystems/nixpkgs-weekly/0.1.0.tar.gz";
+      };
+      # Make regular nixpkgsaccessible.
+      nixpkgs-upstream = {
+        exact = false;
+        to = {
+          type = "github";
+          owner = "NixOS";
+          repo = "nixpkgs";
+        };
+      };
+    };
   };
 
   # Enable derivations for non-free software.
@@ -79,11 +100,12 @@
   programs.bash.enable = true;
 
   # Address low ulimit defaults.
-  launchd.daemons."limit-maxfiles".command = let
-    softLimit = 32768; # 2^15
-    hardLimit = 16777216; # 2^24
+  launchd.daemons."limit-maxfiles".command =
+    let
+      softLimit = 32768; # 2^15
+      hardLimit = 16777216; # 2^24
     in
-      "launchctl limit maxfiles ${toString softLimit} ${toString hardLimit}";
+    "launchctl limit maxfiles ${toString softLimit} ${toString hardLimit}";
 
   users.users.lrewega.home = "/Users/lrewega";
 
