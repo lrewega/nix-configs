@@ -96,6 +96,13 @@
         AddKeysToAgent yes
         IgnoreUnknown UseKeychain
             UseKeychain yes
+        Host orb
+          HostName 127.0.0.1
+          Port 32222
+          User default
+          IdentityFile /Users/lrewega/.orbstack/ssh/id_ed25519
+          ProxyCommand '/Applications/OrbStack.app/Contents/Frameworks/OrbStack Helper.app/Contents/MacOS/OrbStack Helper' ssh-proxy-fdpass 501
+          ProxyUseFdpass yes
       '';
     };
 

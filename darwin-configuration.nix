@@ -55,12 +55,18 @@
   nix = {
     package = pkgs.nixFlakes;
     useDaemon = true;
+    optimise.automatic = true;
     extraOptions = ''
       experimental-features = nix-command flakes repl-flake
       keep-derivations = true
       keep-outputs = true
+      builders-use-substitutes = true
     '';
     settings = {
+      trusted-users = [
+        "root"
+        "@admin" # Ideally we use trust the store signatures instead.
+      ];
       bash-prompt-prefix = "(nix:$name)\\040";
       max-jobs = "auto";
       extra-nix-path = "nixpkgs=flake:nixpkgs";
@@ -91,6 +97,21 @@
         };
       };
     };
+    buildMachines = [
+      {
+        hostName = "nixos@orb";
+        system = "aarch64-linux";
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+        protocol = "ssh-ng";
+      }
+      {
+        hostName = "nixos@orb";
+        system = "x86_64-linux";
+        supportedFeatures = ["nixos-test" "benchmark" "big-parallel" "kvm"];
+        protocol = "ssh-ng";
+      }
+    ];
+    distributedBuilds = true;
   };
 
   # Enable derivations for non-free software.
@@ -108,6 +129,7 @@
     "launchctl limit maxfiles ${toString softLimit} ${toString hardLimit}";
 
   users.users.lrewega.home = "/Users/lrewega";
+  users.users.root.home = "/var/root";
 
   # Used for backwards compatibility, please read the changelog before changing.
   # $ darwin-rebuild changelog
