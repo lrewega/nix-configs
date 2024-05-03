@@ -33,7 +33,13 @@
       '';
       shellAliases = {
         b32 = /* bash */ ''
-          base32(){ LC_ALL=C tr -dc 0-9a-df-np-sv-z </dev/urandom | head -c ''${1:-16};shift;printf '%s\n' \"$*\";};base32 \"$@\"
+          base32() {
+            LC_ALL=C tr -dc 0-9a-df-np-sv-z </dev/urandom | head -c "''${1:-16}"
+            shift
+            printf '%s\n' "$*"
+            unset -f base32
+          }
+          base32 \
         '';
       };
     };
