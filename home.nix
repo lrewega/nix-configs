@@ -74,6 +74,9 @@
         enable = true;
         package = pkgs.gitAndTools.gitFull;
         extraConfig = {
+          core = {
+            sshCommand = "/usr/bin/ssh";
+          };
           init = {
             defaultBranch = "main";
           };
@@ -101,7 +104,7 @@
         IdentityFile ~/.ssh/id_ed25519
         AddKeysToAgent yes
         IgnoreUnknown UseKeychain
-            UseKeychain yes
+        UseKeychain yes
         Host orb
           HostName 127.0.0.1
           Port 32222
