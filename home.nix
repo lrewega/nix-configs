@@ -125,6 +125,15 @@
         };
         nixpkgs-fmt = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt";
         extraPlugins = {
+          vim-pbtxt = pkgs.vimUtils.buildVimPlugin {
+            name = "vim-pbtxt";
+            src = pkgs.fetchFromGitHub {
+              owner = "cybrown-zoox";
+              repo = "vim-pbtxt";
+              rev = "d8e388d85f420c46cc4d95751b61349819c1d6fe";
+              hash = "sha256-p/bFsZ6t7jQxj1Gx3p7ceWiTFDo5bi7iqPiZCrgn6VI=";
+            };
+          };
           vim-synthwave84 = pkgs.vimUtils.buildVimPlugin {
             name = "vim-synthwave84";
             src = pkgs.fetchFromGitHub {
@@ -153,7 +162,7 @@
           builtins.attrValues
             {
               inherit (pkgs.vimPlugins)
-                # Languages
+                # Languages/syntax
                 mkdx
                 vim-go
                 vim-helm
