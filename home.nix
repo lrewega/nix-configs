@@ -115,13 +115,13 @@
       '';
     };
 
-
     vim =
       let
         lsp = {
           yaml-language-server = "${pkgs.yaml-language-server}/bin/yaml-language-server";
           json-language-server = "${pkgs.vscode-langservers-extracted}/bin/vscode-json-language-server";
           nix-language-server = "${pkgs.nil}/bin/nil";
+          helm-language-server = "${pkgs.helm-ls}/bin/helm_ls";
         };
         nixpkgs-fmt = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt";
         extraPlugins = {
@@ -339,8 +339,8 @@
               \     },
               \   },
               \ })
-              autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
             endif
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
           endif
 
           " LSP for *.yaml
@@ -372,6 +372,27 @@
             autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.yaml')
           endif
 
+          " LSP for Helm charts
+          let s:lsp_exe_helm = '${lsp.helm-language-server}'
+          if executable(s:lsp_exe_helm)
+            autocmd User lsp_setup call lsp#register_server({
+            \   'name': 'helm-language-server',
+            \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_helm . ' serve']},
+            \   'allowlist': ['helm'],
+            \   'root_uri': {-> s:root_uri('Chart.yaml')},
+            \ })
+            if executable(s:lsp_exe_yaml)
+              autocmd User lsp_setup call lsp#update_workspace_config('helm-language-server', {
+              \   'helm-language-server': {
+              \     'yamlls': {
+              \       'path': s:lsp_exe_yaml,
+              \     },
+              \   },
+              \ })
+            endif
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('templates/**.yaml')
+          endif
+
           " LSP for *.json
           let s:lsp_exe_json = '${lsp.json-language-server}'
           if executable(s:lsp_exe_json)
@@ -397,7 +418,8 @@
 
           " LSP helper function to find a reasonable filesystem root path for a project.
           function s:root_uri(...) abort
-            function s:join(...) abort
+            let l:fun = {}
+            function fun.join(...) abort closure
               let sep = has('win32') ? '\' : '/'
               return join(map(copy(a:000), "substitute(v:val, '[/\\\\]\\+$', \"\", \"\")"), sep)
             endfunction
@@ -405,7 +427,7 @@
             let prev = ""
             while root !=# prev
               for name in a:000
-                if getftype(s:join(root, name)) !=# ""
+                if getftype(l:fun.join(root, name)) !=# ""
                   return lsp#utils#path_to_uri(root)
                 endif
               endfor
@@ -420,6 +442,10 @@
             setlocal updatetime=250
             setlocal omnifunc=lsp#complete
             nmap <buffer> K <plug>(lsp-hover)
+            let g:lsp_diagnostics_float_cursor = 1
+            let g:lsp_diagnostics_virtual_text_align = "after"
+            let g:lsp_inlay_hints_enabled = 1
+            " Set autoformat on save
             let g:lsp_format_sync_timeout = 1000
             augroup LSPFormatOnSave
               autocmd!
