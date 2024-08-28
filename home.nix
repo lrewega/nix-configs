@@ -340,7 +340,7 @@
               \   },
               \ })
             endif
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.nix')
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled_format_on_save('*.nix')
           endif
 
           " LSP for *.yaml
@@ -350,6 +350,7 @@
             \   'name': 'yaml-language-server',
             \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_yaml . ' --stdio']},
             \   'allowlist': ['yaml'],
+            \   'blocklist': ['helm'],
             \   'root_uri': {-> s:root_uri('.git')},
             \   'workspace_config': {
             \     'yaml': {
@@ -369,7 +370,7 @@
             \     },
             \   },
             \ })
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.yaml')
+            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled_format_on_save('*.yaml')
           endif
 
           " LSP for Helm charts
@@ -390,7 +391,6 @@
               \   },
               \ })
             endif
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('templates/**.yaml')
           endif
 
           " LSP for *.json
@@ -413,8 +413,9 @@
             \     },
             \   },
             \ })
-            autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled('*.json')
           endif
+
+          autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
 
           " LSP helper function to find a reasonable filesystem root path for a project.
           function s:root_uri(...) abort
@@ -438,13 +439,17 @@
           endfunction
 
           " Stuff to run when LSP is engaged for a buffer
-          function s:on_lsp_buffer_enabled(matches)
+          function s:on_lsp_buffer_enabled()
             setlocal updatetime=250
             setlocal omnifunc=lsp#complete
             nmap <buffer> K <plug>(lsp-hover)
             let g:lsp_diagnostics_float_cursor = 1
             let g:lsp_diagnostics_virtual_text_align = "after"
             let g:lsp_inlay_hints_enabled = 1
+          endfunction
+
+          " Set up format-on-save for certain buffers
+          function s:on_lsp_buffer_enabled_format_on_save(matches)
             " Set autoformat on save
             let g:lsp_format_sync_timeout = 1000
             augroup LSPFormatOnSave
