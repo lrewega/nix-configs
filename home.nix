@@ -122,6 +122,26 @@
           json-language-server = "${pkgs.vscode-langservers-extracted}/bin/vscode-json-language-server";
           nix-language-server = "${pkgs.nil}/bin/nil";
           helm-language-server = "${pkgs.helm-ls}/bin/helm_ls";
+          protobuf-language-server =
+            let
+              buf = pkgs.buildGo123Module rec {
+                pname = "buf";
+                version = "mcy/lsp";
+                src = pkgs.fetchFromGitHub {
+                  owner = "bufbuild";
+                  repo = pname;
+                  rev = "${version}";
+                  hash = "sha256-kzC7QuXyIbOoKZmyIEe8fuUMfyFJrTX2Jj5XzIBF0w8=";
+                };
+                subPackages = [ "cmd/buf" ];
+                CGO_ENABLED = 0;
+                proxyVendor = true;
+                vendorHash = "sha256-emqGSVmTSAwSGgyIN/G+qbrSIQJsS/8Mb8TDVu1qy2Y=";
+                ldflags = [ "-s" "-w" ];
+                doCheck = false;
+              };
+            in
+            "${buf}/bin/buf";
         };
         nixpkgs-fmt = "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt";
         extraPlugins = {
@@ -412,6 +432,17 @@
             \       },
             \     },
             \   },
+            \ })
+          endif
+
+          " LSP for *.proto
+          let s:lsp_exe_proto = '${lsp.protobuf-language-server}'
+          if executable(s:lsp_exe_proto)
+            autocmd User lsp_setup call lsp#register_server({
+            \   'name': 'buf-lsp',
+            \   'cmd': {server_info->[&shell, &shellcmdflag, s:lsp_exe_proto . ' beta lsp']},
+            \   'allowlist': ['proto'],
+            \   'root_uri': {-> s:root_uri('buf.yaml')},
             \ })
           endif
 
